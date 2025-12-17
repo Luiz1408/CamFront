@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: process.env.NODE_ENV === 'production' 
+    ? 'http://luiz1432-001-site1.site4future.com/api'
+    : '/api',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
