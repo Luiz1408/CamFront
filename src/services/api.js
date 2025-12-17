@@ -1,9 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.NODE_ENV === 'production' 
-    ? 'https://cors-anywhere.herokuapp.com/http://luiz1432-001-site1.site4future.com/api'
-    : '/api',
+  baseURL: 'https://luiz1432-001-site1.site4future.com/api',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
