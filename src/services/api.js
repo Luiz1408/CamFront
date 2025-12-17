@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://localhost:5236/api',
+  baseURL: 'https://luiz1432-001-site1.site4future.com',
 });
 
 let logoutHandler = null;
