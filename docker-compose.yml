@@ -11,7 +11,7 @@ services:
       - "3000:80"
     environment:
       - NODE_ENV=production
-      - REACT_APP_API_URL=http://10.110.224.37:8080/api
+      - REACT_APP_API_URL=http://luiz1432-001-site1.site4future.com/api
     restart: unless-stopped
     networks:
       - truper-network
