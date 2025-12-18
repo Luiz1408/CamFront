@@ -23,6 +23,19 @@ const NuevaRevisionModal = ({ isOpen, onClose, onSubmit, loading }) => {
   const [areasSolicita, setAreasSolicita] = useState([]);
   const [loadingCatalogos, setLoadingCatalogos] = useState(false);
 
+  // Limpiar formulario cuando se abre el modal
+  useEffect(() => {
+    if (isOpen) {
+      setFormData({
+        titulo: '',
+        fechaIncidente: '',
+        ubicacion: '',
+        areaQueSolicita: ''
+      });
+      setErrors({});
+    }
+  }, [isOpen]);
+
   // Cargar catálogos
   useEffect(() => {
     const cargarCatalogos = async () => {
@@ -184,9 +197,11 @@ const NuevaRevisionModal = ({ isOpen, onClose, onSubmit, loading }) => {
             name="fechaIncidente"
             value={formData.fechaIncidente}
             onChange={handleInputChange}
+            max={new Date().toISOString().split('T')[0]}
             required
           />
           {errors.fechaIncidente && <div className="invalid-feedback">{errors.fechaIncidente}</div>}
+          <small className="text-muted">Solo se permiten fechas de hoy hacia atrás</small>
         </div>
 
         <div className="mb-3">
