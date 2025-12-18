@@ -1,13 +1,15 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: process.env.API_URL || process.env.REACT_APP_API_URL || (process.env.NODE_ENV === 'production' 
-    ? 'https://luiz1432-001-site1.site4future.com/api'
-    : '/api'),
+  baseURL:
+    process.env.REACT_APP_API_URL ||
+    (process.env.NODE_ENV === 'production'
+      ? 'https://luiz1432-001-site1.site4future.com/api'
+      : 'http://localhost:5236'),
   headers: {
     'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  }
+    Accept: 'application/json',
+  },
 });
 
 let logoutHandler = null;
@@ -16,16 +18,19 @@ export const setLogoutHandler = (handler) => {
   logoutHandler = handler;
 };
 
-// REQUEST → agrega token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
+// Agrega token a cada request
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
-// RESPONSE → maneja 401
+// Maneja 401
 api.interceptors.response.use(
   (response) => response,
   (error) => {
