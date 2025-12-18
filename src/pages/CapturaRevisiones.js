@@ -44,6 +44,58 @@ const MESES_ORDEN = [
   'Diciembre',
 ];
 
+const DIAS_ORDEN = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+// Función para generar semanas del año actual
+const generateWeeks = () => {
+  const weeks = [];
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  
+  for (let week = 1; week <= 52; week++) {
+    const firstDayOfYear = new Date(currentYear, 0, 1);
+    const firstDayOfWeek = new Date(firstDayOfYear);
+    firstDayOfWeek.setDate(firstDayOfYear.getDate() + (week - 1) * 7);
+    
+    const startOfWeek = new Date(firstDayOfWeek);
+    // Ajustar para que la semana empiece en lunes (1 = lunes, 0 = domingo)
+    const dayOfWeek = startOfWeek.getDay();
+    const daysToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    startOfWeek.setDate(startOfWeek.getDate() - daysToMonday);
+    
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    
+    // Solo incluir semanas hasta la fecha actual
+    if (startOfWeek <= now) {
+      weeks.push({
+        value: week,
+        label: `Sem ${week} (${startOfWeek.toLocaleDateString('es-MX')} - ${endOfWeek.toLocaleDateString('es-MX')})`,
+        start: startOfWeek,
+        end: endOfWeek
+      });
+    }
+  }
+  
+  return weeks.reverse(); // Más recientes primero
+};
+
+// Función para generar últimos 2 años
+const generateYears = () => {
+  const years = [];
+  const currentYear = new Date().getFullYear();
+  
+  for (let i = 0; i < 2; i++) {
+    const year = currentYear - i;
+    years.push({
+      value: year,
+      label: year.toString()
+    });
+  }
+  
+  return years;
+};
+
 const CapturaRevisiones = () => {
   const { openModal: openUserManagementModal } = useUserManagement();
   const [showModal, setShowModal] = useState(false);
@@ -51,6 +103,125 @@ const CapturaRevisiones = () => {
   const [revisiones, setRevisiones] = useState([]);
   const [monitoristas, setMonitoristas] = useState([]);
   const [activeTab, setActiveTab] = useState('tabla');
+  const [chartTimeTab, setChartTimeTab] = useState('mes'); // Estado para pestañas de tiempo en gráficas
+  const [selectedDay, setSelectedDay] = useState(''); // Estado para filtro de día específico
+  const [selectedWeek, setSelectedWeek] = useState(''); // Estado para filtro de semana específica
+  const [selectedYear, setSelectedYear] = useState(''); // Estado para filtro de año específico
+  const [originalDay, setOriginalDay] = useState(''); // Estado para mantener el día original como referencia
+
+  // Función para sincronizar filtros cuando cambia el periodo
+  const syncFilters = (newTab) => {
+    const today = new Date();
+    
+    if (newTab === 'dia') {
+      // Si venimos de otro periodo, usamos el día original si existe
+      // Si no, ponemos hoy
+      if (!selectedDay && originalDay) {
+        setSelectedDay(originalDay);
+      } else if (!selectedDay) {
+        const todayString = today.toISOString().split('T')[0];
+        setSelectedDay(todayString);
+        setOriginalDay(todayString);
+      }
+      setSelectedWeek('');
+      setMesSeleccionadoTopAlmacenes('');
+      setSelectedYear('');
+    } else if (newTab === 'semana') {
+      // Si venimos de día, guardamos el día y calculamos la semana
+      if (selectedDay) {
+        setOriginalDay(selectedDay); // Guardamos el día original
+        const dayDate = new Date(selectedDay);
+        const weeks = generateWeeks();
+        const currentWeek = weeks.find(w => {
+          return dayDate >= w.start && dayDate <= w.end;
+        });
+        if (currentWeek) {
+          setSelectedWeek(currentWeek.value.toString());
+        }
+      } else if (originalDay) {
+        // Si no tenemos día seleccionado pero tenemos día original, lo usamos
+        const dayDate = new Date(originalDay);
+        const weeks = generateWeeks();
+        const currentWeek = weeks.find(w => {
+          return dayDate >= w.start && dayDate <= w.end;
+        });
+        if (currentWeek) {
+          setSelectedWeek(currentWeek.value.toString());
+        }
+      }
+      setSelectedDay('');
+      setMesSeleccionadoTopAlmacenes('');
+      setSelectedYear('');
+    } else if (newTab === 'mes') {
+      // Si venimos de día, guardamos el día y calculamos el mes
+      if (selectedDay) {
+        setOriginalDay(selectedDay); // Guardamos el día original
+        const dayDate = new Date(selectedDay);
+        const monthName = MESES_ORDEN[dayDate.getMonth()];
+        const year = dayDate.getFullYear();
+        setMesSeleccionadoTopAlmacenes(`${monthName} ${year}`);
+      } else if (selectedWeek) {
+        // Si venimos de semana, calculamos el mes de esa semana
+        const weeks = generateWeeks();
+        const weekData = weeks.find(w => w.value === parseInt(selectedWeek));
+        if (weekData) {
+          const monthName = MESES_ORDEN[weekData.start.getMonth()];
+          const year = weekData.start.getFullYear();
+          setMesSeleccionadoTopAlmacenes(`${monthName} ${year}`);
+        }
+      } else if (originalDay) {
+        // Si no tenemos día seleccionado pero tenemos día original, lo usamos
+        const dayDate = new Date(originalDay);
+        const monthName = MESES_ORDEN[dayDate.getMonth()];
+        const year = dayDate.getFullYear();
+        setMesSeleccionadoTopAlmacenes(`${monthName} ${year}`);
+      }
+      setSelectedDay('');
+      setSelectedWeek('');
+      setSelectedYear('');
+    } else if (newTab === 'año') {
+      // Si venimos de día, guardamos el día y calculamos el año
+      if (selectedDay) {
+        setOriginalDay(selectedDay); // Guardamos el día original
+        setSelectedYear(new Date(selectedDay).getFullYear().toString());
+      } else if (selectedWeek) {
+        // Si venimos de semana, calculamos el año de esa semana
+        const weeks = generateWeeks();
+        const weekData = weeks.find(w => w.value === parseInt(selectedWeek));
+        if (weekData) {
+          setSelectedYear(weekData.start.getFullYear().toString());
+        }
+      } else if (mesSeleccionadoTopAlmacenes) {
+        // Si venimos de mes, calculamos el año de ese mes
+        const [mes, año] = mesSeleccionadoTopAlmacenes.split(' ');
+        setSelectedYear(año);
+      } else if (originalDay) {
+        // Si no tenemos día seleccionado pero tenemos día original, lo usamos
+        setSelectedYear(new Date(originalDay).getFullYear().toString());
+      }
+      setSelectedDay('');
+      setSelectedWeek('');
+      setMesSeleccionadoTopAlmacenes('');
+    }
+  };
+
+  // Manejador de cambio de pestaña de tiempo
+  const handleChartTimeTabChange = (newTab) => {
+    syncFilters(newTab);
+    setChartTimeTab(newTab);
+  };
+
+  // Función para limpiar todos los filtros y poner día de hoy
+  const clearAllFilters = () => {
+    const today = new Date();
+    const todayString = today.toISOString().split('T')[0];
+    setSelectedDay(todayString);
+    setOriginalDay(todayString); // También establecemos el día original
+    setSelectedWeek('');
+    setMesSeleccionadoTopAlmacenes('');
+    setSelectedYear('');
+    // No cambiamos la pestaña, mantenemos la actual
+  };
 
   const [monitoristaSeleccionadoIds, setMonitoristaSeleccionadoIds] = useState({});
 
@@ -391,6 +562,17 @@ const CapturaRevisiones = () => {
   };
 
   const handleFechaIncidenteChange = async (revisionId, nuevaFecha) => {
+    // Validar que la fecha no sea futura
+    const hoy = new Date().toISOString().split('T')[0];
+    if (nuevaFecha > hoy) {
+      showFeedback(
+        'Fecha no válida',
+        'La fecha del incidente no puede ser futura. Solo se permiten fechas de hoy hacia atrás.',
+        'warning'
+      );
+      return;
+    }
+
     try {
       await updateRevision(revisionId, { fechaIncidente: nuevaFecha });
       setRevisiones((prev) =>
@@ -775,6 +957,289 @@ const CapturaRevisiones = () => {
   const monthlyLineData = monthlyData.chartData;
   const monthlySummary = monthlyData.summary;
 
+  // Función para filtrar revisiones por periodo
+  const getRevisionesByPeriod = useMemo(() => {
+    let fechaInicio;
+    let fechaFin = new Date();
+    
+    if (chartTimeTab === 'dia') {
+      // Día específico seleccionado
+      if (selectedDay) {
+        fechaInicio = new Date(selectedDay);
+        fechaFin = new Date(selectedDay);
+        fechaFin.setDate(fechaFin.getDate() + 1); // Incluir todo el día
+      } else {
+        // Si no hay día seleccionado, usar hoy
+        fechaInicio = new Date();
+        fechaInicio.setHours(0, 0, 0, 0);
+        fechaFin = new Date();
+        fechaFin.setHours(23, 59, 59, 999);
+      }
+    } else if (chartTimeTab === 'semana') {
+      // Semana específica seleccionada
+      if (selectedWeek) {
+        const weeks = generateWeeks();
+        const weekData = weeks.find(w => w.value === parseInt(selectedWeek));
+        if (weekData) {
+          fechaInicio = new Date(weekData.start);
+          fechaFin = new Date(weekData.end);
+          fechaFin.setHours(23, 59, 59, 999);
+        }
+      } else {
+        // Si no hay semana seleccionada, usar última semana
+        fechaInicio = new Date();
+        fechaInicio.setDate(fechaInicio.getDate() - 7);
+      }
+    } else if (chartTimeTab === 'mes') {
+      // Mes específico seleccionado (mantener lógica existente)
+      if (mesSeleccionadoTopAlmacenes) {
+        const [mes, año] = mesSeleccionadoTopAlmacenes.split(' ');
+        const mesIndex = MESES_ORDEN.indexOf(mes);
+        if (mesIndex !== -1) {
+          fechaInicio = new Date(parseInt(año), mesIndex, 1);
+          fechaFin = new Date(parseInt(año), mesIndex + 1, 0);
+          fechaFin.setHours(23, 59, 59, 999);
+        }
+      } else {
+        // Últimos 12 meses
+        fechaInicio = new Date();
+        fechaInicio.setMonth(fechaInicio.getMonth() - 12);
+      }
+    } else if (chartTimeTab === 'año') {
+      // Año específico seleccionado
+      if (selectedYear) {
+        fechaInicio = new Date(parseInt(selectedYear), 0, 1);
+        fechaFin = new Date(parseInt(selectedYear), 11, 31);
+        fechaFin.setHours(23, 59, 59, 999);
+      } else {
+        // Últimos 5 años
+        fechaInicio = new Date();
+        fechaInicio.setFullYear(fechaInicio.getFullYear() - 5);
+      }
+    } else {
+      // Todos los datos
+      fechaInicio = new Date(0);
+    }
+    
+    return revisionesConEstatusActualizado.filter(revision => {
+      if (!revision.fechaRegistro) return false;
+      const fechaRevision = new Date(revision.fechaRegistro);
+      return fechaRevision >= fechaInicio && fechaRevision <= fechaFin;
+    });
+  }, [revisionesConEstatusActualizado, chartTimeTab, selectedDay, selectedWeek, mesSeleccionadoTopAlmacenes, selectedYear]);
+
+  // Estatus chart data filtrado por periodo
+  const estatusChartDataByPeriod = useMemo(() => {
+    const counts = STATUS_CONFIG.map((status) => ({
+      ...status,
+      value: getRevisionesByPeriod.filter((rev) => rev.estatus === status.key).length,
+    }));
+
+    return {
+      labels: counts.map((item) => item.label),
+      datasets: [
+        {
+          data: counts.map((item) => item.value),
+          backgroundColor: counts.map((item) => item.background.replace('0.35', '0.7')),
+          borderColor: counts.map((item) => item.color),
+          borderWidth: 2,
+        },
+      ],
+    };
+  }, [getRevisionesByPeriod]);
+
+  // Top almacenes filtrado por periodo
+  const topAlmacenesByPeriod = useMemo(() => {
+    const counts = {};
+    const revisionesFiltradas = chartTimeTab === 'mes' && mesSeleccionadoTopAlmacenes
+      ? getRevisionesByPeriod.filter((r) => {
+          const mes = new Date(r.fechaRegistro).toLocaleDateString('es-MX', { month: 'long', year: 'numeric' });
+          return mes === mesSeleccionadoTopAlmacenes;
+        })
+      : getRevisionesByPeriod;
+
+    revisionesFiltradas.forEach((revision) => {
+      if (!revision.almacen) return;
+      if (!counts[revision.almacen]) {
+        counts[revision.almacen] = {
+          total: 0,
+          breakdown: STATUS_CONFIG.reduce((acc, status) => {
+            acc[status.key] = 0;
+            return acc;
+          }, {}),
+        };
+      }
+
+      counts[revision.almacen].total += 1;
+      const estatus = STATUS_CONFIG.find((status) => status.key === revision.estatus)?.key ?? STATUS_CONFIG[0].key;
+      counts[revision.almacen].breakdown[estatus] += 1;
+    });
+
+    return Object.entries(counts)
+      .sort((a, b) => b[1].total - a[1].total)
+      .slice(0, 8)
+      .map(([almacen, info]) => ({
+        almacen,
+        total: info.total,
+        breakdown: STATUS_CONFIG.map((status) => ({
+          key: status.key,
+          label: status.label,
+          color: status.color,
+          background: status.background,
+          value: info.breakdown[status.key],
+        })),
+      }));
+  }, [getRevisionesByPeriod, chartTimeTab, mesSeleccionadoTopAlmacenes]);
+
+  // Almacenes chart data filtrado por periodo
+  const almacenesChartDataByPeriod = useMemo(() => {
+    if (topAlmacenesByPeriod.length === 0) {
+      return { labels: [], datasets: [] };
+    }
+
+    return {
+      labels: topAlmacenesByPeriod.map((item) => item.almacen),
+      datasets: STATUS_CONFIG.map((status) => ({
+        label: status.label,
+        data: topAlmacenesByPeriod.map((item) =>
+          item.breakdown.find((b) => b.key === status.key)?.value ?? 0
+        ),
+        backgroundColor: status.background.replace('0.35', '0.9'),
+        borderColor: status.color,
+        borderWidth: 1,
+        borderRadius: 6,
+        barThickness: 24,
+        borderSkipped: false,
+      })),
+    };
+  }, [topAlmacenesByPeriod]);
+
+  const getChartDataByPeriod = useMemo(() => {
+    if (chartTimeTab === 'dia') {
+      // Datos por día de la semana
+      const diasData = DIAS_ORDEN.reduce((acc, dia) => ({
+        ...acc,
+        [dia]: STATUS_CONFIG.reduce((statusAcc, status) => {
+          statusAcc[status.key] = 0;
+          return statusAcc;
+        }, {})
+      }), {});
+
+      getRevisionesByPeriod.forEach((revision) => {
+        if (!revision.fechaRegistro) return;
+        const fecha = new Date(revision.fechaRegistro);
+        if (isNaN(fecha.getTime())) return;
+        const diaSemana = DIAS_ORDEN[fecha.getDay()];
+        
+        diasData[diaSemana][revision.estatus] = (diasData[diaSemana][revision.estatus] || 0) + 1;
+      });
+
+      return {
+        labels: DIAS_ORDEN,
+        datasets: STATUS_CONFIG.map((status) => ({
+          label: status.label,
+          data: DIAS_ORDEN.map(dia => diasData[dia][status.key] || 0),
+          borderColor: status.color,
+          backgroundColor: status.background.replace('0.35', '0.35'),
+          tension: 0.35,
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: status.color,
+          fill: true,
+          spanGaps: true,
+        }))
+      };
+    } else if (chartTimeTab === 'semana') {
+      // Datos por semana del año (últimas 12 semanas)
+      const semanasData = {};
+      const now = new Date();
+      
+      // Inicializar últimas 12 semanas
+      for (let i = 11; i >= 0; i--) {
+        const semanaInicio = new Date(now);
+        semanaInicio.setDate(now.getDate() - (i * 7));
+        semanaInicio.setDate(semanaInicio.getDate() - semanaInicio.getDay());
+        const semanaKey = `Sem ${Math.ceil((semanaInicio - new Date(semanaInicio.getFullYear(), 0, 1)) / (7 * 24 * 60 * 60 * 1000))}`;
+        semanasData[semanaKey] = STATUS_CONFIG.reduce((acc, status) => {
+          acc[status.key] = 0;
+          return acc;
+        }, {});
+      }
+
+      getRevisionesByPeriod.forEach((revision) => {
+        if (!revision.fechaRegistro) return;
+        const fecha = new Date(revision.fechaRegistro);
+        if (isNaN(fecha.getTime())) return;
+        
+        const semanaInicio = new Date(fecha);
+        semanaInicio.setDate(fecha.getDate() - fecha.getDay());
+        const semanaNum = Math.ceil((semanaInicio - new Date(semanaInicio.getFullYear(), 0, 1)) / (7 * 24 * 60 * 60 * 1000));
+        const semanaKey = `Sem ${semanaNum}`;
+        
+        if (semanasData[semanaKey]) {
+          semanasData[semanaKey][revision.estatus] = (semanasData[semanaKey][revision.estatus] || 0) + 1;
+        }
+      });
+
+      return {
+        labels: Object.keys(semanasData),
+        datasets: STATUS_CONFIG.map((status) => ({
+          label: status.label,
+          data: Object.values(semanasData).map(semana => semana[status.key] || 0),
+          borderColor: status.color,
+          backgroundColor: status.background.replace('0.35', '0.35'),
+          tension: 0.35,
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: status.color,
+          fill: true,
+          spanGaps: true,
+        }))
+      };
+    } else if (chartTimeTab === 'año') {
+      // Datos por año
+      const añosData = {};
+      
+      getRevisionesByPeriod.forEach((revision) => {
+        if (!revision.fechaRegistro) return;
+        const fecha = new Date(revision.fechaRegistro);
+        if (isNaN(fecha.getTime())) return;
+        const año = fecha.getFullYear().toString();
+        
+        if (!añosData[año]) {
+          añosData[año] = STATUS_CONFIG.reduce((acc, status) => {
+            acc[status.key] = 0;
+            return acc;
+          }, {});
+        }
+        
+        añosData[año][revision.estatus] = (añosData[año][revision.estatus] || 0) + 1;
+      });
+
+      return {
+        labels: Object.keys(añosData).sort(),
+        datasets: STATUS_CONFIG.map((status) => ({
+          label: status.label,
+          data: Object.keys(añosData).sort().map(año => añosData[año][status.key] || 0),
+          borderColor: status.color,
+          backgroundColor: status.background.replace('0.35', '0.35'),
+          tension: 0.35,
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: '#fff',
+          pointBorderColor: status.color,
+          fill: true,
+          spanGaps: true,
+        }))
+      };
+    } else {
+      // Mensual (usar monthlyLineData ya declarado)
+      return monthlyLineData;
+    }
+  }, [getRevisionesByPeriod, chartTimeTab, monthlyLineData]);
+
   const monthlyLineOptions = useMemo(
     () => ({
       responsive: true,
@@ -1052,6 +1517,8 @@ const CapturaRevisiones = () => {
                                 className="form-control form-control-sm border-0 bg-light"
                                 value={revision.fechaIncidente}
                                 onChange={(e) => handleFechaIncidenteChange(revision.id, e.target.value)}
+                                max={new Date().toISOString().split('T')[0]}
+                                title="Solo se permiten fechas de hoy hacia atrás"
                               />
                             </div>
                           </td>
@@ -1156,166 +1623,288 @@ const CapturaRevisiones = () => {
                 </div>
               </>
             ) : (
-              <div className="row g-4">
-                <div className="col-lg-4">
-                  <div className="card h-100 border-0 shadow-sm">
-                    <div className="card-header bg-white border-0">
-                      <h6 className="mb-0 text-uppercase text-muted">
-                        <i className="fas fa-circle-notch me-1 text-primary"></i>
-                        Estatus global
-                      </h6>
-                    </div>
-                    <div className="card-body">
-                      {hasPieData ? (
-                        <div className="d-flex flex-column flex-lg-row align-items-center gap-3">
-                          <div style={{ height: 260, width: '100%' }}>
-                            <Pie data={estatusChartData} options={estatusChartOptions} />
-                          </div>
-                          <div className="w-100">
-                            {balancePorEstatus.map((status) => (
-                              <div
-                                key={status.key}
-                                className="d-flex justify-content-between align-items-center border rounded py-1 px-2 mb-2 bg-light"
-                              >
-                                <div className="d-flex align-items-center">
-                                  <span className="badge rounded-circle me-2 bg-secondary" style={{ width: 10, height: 10 }}></span>
-                                  <span className="fw-semibold">{status.label}</span>
-                                </div>
-                                <span className="text-muted">{status.value}</span>
+              <>
+                <div className="row mb-4">
+                  <div className="col-12">
+                    <div className="card bg-light">
+                      <div className="card-body">
+                        <div className="d-flex justify-content-between align-items-center mb-3">
+                          <h6 className="card-title mb-0">
+                            <i className="fas fa-clock me-2"></i>
+                            Periodo de Tiempo
+                          </h6>
+                          <button
+                            className="btn btn-outline-secondary btn-sm"
+                            onClick={clearAllFilters}
+                            title="Limpiar filtros y poner día de hoy"
+                          >
+                            <i className="fas fa-times me-1"></i>
+                            Limpiar
+                          </button>
+                        </div>
+                        <ul className="nav nav-pills nav-pills-lg" role="tablist">
+                          <li className="nav-item" role="presentation">
+                            <button
+                              className={`nav-link ${chartTimeTab === 'dia' ? 'active' : ''}`}
+                              onClick={() => handleChartTimeTabChange('dia')}
+                              type="button"
+                            >
+                              <i className="fas fa-calendar-day me-2"></i>
+                              Día
+                            </button>
+                          </li>
+                          <li className="nav-item" role="presentation">
+                            <button
+                              className={`nav-link ${chartTimeTab === 'semana' ? 'active' : ''}`}
+                              onClick={() => handleChartTimeTabChange('semana')}
+                              type="button"
+                            >
+                              <i className="fas fa-calendar-week me-2"></i>
+                              Semana
+                            </button>
+                          </li>
+                          <li className="nav-item" role="presentation">
+                            <button
+                              className={`nav-link ${chartTimeTab === 'mes' ? 'active' : ''}`}
+                              onClick={() => handleChartTimeTabChange('mes')}
+                              type="button"
+                            >
+                              <i className="fas fa-calendar-alt me-2"></i>
+                              Mes
+                            </button>
+                          </li>
+                          <li className="nav-item" role="presentation">
+                            <button
+                              className={`nav-link ${chartTimeTab === 'año' ? 'active' : ''}`}
+                              onClick={() => handleChartTimeTabChange('año')}
+                              type="button"
+                            >
+                              <i className="fas fa-calendar me-2"></i>
+                              Año
+                            </button>
+                          </li>
+                        </ul>
+                        <div className="mt-3">
+                          <small className="text-muted">
+                            {chartTimeTab === 'dia' && 'Mostrando datos de un día específico'}
+                            {chartTimeTab === 'semana' && 'Mostrando datos de una semana específica'}
+                            {chartTimeTab === 'mes' && 'Mostrando datos de un mes específico'}
+                            {chartTimeTab === 'año' && 'Mostrando datos de un año específico'}
+                          </small>
+                          <div className="mt-2">
+                            {chartTimeTab === 'dia' && (
+                              <div className="d-flex align-items-center gap-2">
+                                <input
+                                  type="date"
+                                  className="form-select form-select-sm d-inline-block w-auto"
+                                  value={selectedDay}
+                                  onChange={(e) => setSelectedDay(e.target.value)}
+                                  max={new Date().toISOString().split('T')[0]}
+                                  title="Solo se permiten fechas de hoy hacia atrás"
+                                />
+                                <small className="text-muted">
+                                  {selectedDay ? `Día: ${selectedDay}` : 'Selecciona un día'}
+                                </small>
                               </div>
-                            ))}
+                            )}
+                            {chartTimeTab === 'semana' && (
+                              <div className="d-flex align-items-center gap-2">
+                                <select
+                                  className="form-select form-select-sm d-inline-block w-auto"
+                                  value={selectedWeek}
+                                  onChange={(e) => setSelectedWeek(e.target.value)}
+                                >
+                                  <option value="">Seleccionar semana</option>
+                                  {generateWeeks().map((week) => (
+                                    <option key={week.value} value={week.value}>
+                                      {week.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                <small className="text-muted">
+                                  {selectedWeek ? `Semana ${selectedWeek} seleccionada` : 'Selecciona una semana'}
+                                </small>
+                              </div>
+                            )}
+                            {chartTimeTab === 'mes' && (
+                              <div className="d-flex align-items-center gap-2">
+                                <select
+                                  className="form-select form-select-sm d-inline-block w-auto"
+                                  value={mesSeleccionadoTopAlmacenes}
+                                  onChange={(e) => setMesSeleccionadoTopAlmacenes(e.target.value)}
+                                >
+                                  <option value="">Todos los meses</option>
+                                  {mesesDisponibles.map((mes) => (
+                                    <option key={mes} value={mes}>
+                                      {mes}
+                                    </option>
+                                  ))}
+                                </select>
+                                <small className="text-muted">
+                                  {mesSeleccionadoTopAlmacenes ? `Mes: ${mesSeleccionadoTopAlmacenes}` : 'Todos los meses'}
+                                </small>
+                              </div>
+                            )}
+                            {chartTimeTab === 'año' && (
+                              <div className="d-flex align-items-center gap-2">
+                                <select
+                                  className="form-select form-select-sm d-inline-block w-auto"
+                                  value={selectedYear}
+                                  onChange={(e) => setSelectedYear(e.target.value)}
+                                >
+                                  <option value="">Seleccionar año</option>
+                                  {generateYears().map((year) => (
+                                    <option key={year.value} value={year.value}>
+                                      {year.label}
+                                    </option>
+                                  ))}
+                                </select>
+                                <small className="text-muted">
+                                  {selectedYear ? `Año: ${selectedYear}` : 'Selecciona un año'}
+                                </small>
+                              </div>
+                            )}
                           </div>
                         </div>
-                      ) : (
-                        <div className="text-center text-muted py-5">
-                          <i className="fas fa-chart-pie fa-2x mb-2"></i>
-                          <p className="mb-0">Sin datos suficientes</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-lg-8">
-                  <div className="card h-100 border-0 shadow-sm">
-                    <div className="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-                      <h6 className="mb-0 text-uppercase text-muted">
-                        <i className="fas fa-store-alt me-1 text-primary"></i>
-                        Top almacenes
-                      </h6>
-                      <div className="d-flex align-items-center gap-2">
-                        <select
-                          className="form-select form-select-sm"
-                          value={mesSeleccionadoTopAlmacenes}
-                          onChange={(e) => setMesSeleccionadoTopAlmacenes(e.target.value)}
-                        >
-                          <option value="">Todos los meses</option>
-                          {mesesDisponibles.map((mes) => (
-                            <option key={mes} value={mes}>
-                              {mes}
-                            </option>
-                          ))}
-                        </select>
-                        <small className="text-muted">Últimas capturas</small>
                       </div>
                     </div>
-                    <div className="card-body">
-                      {hasBarData ? (
-                        <div className="row g-4">
-                          <div className="col-md-8">
-                            <div style={{ height: 300 }}>
-                              <Bar data={almacenesChartData} options={almacenesChartOptions} />
-                            </div>
-                          </div>
-                          <div className="col-md-4">
-                            <div className="border rounded p-2">
-                              <h6 className="text-muted mb-2 small">Top almacenes</h6>
-                              <div className="small">
-                                {topAlmacenes.map((almacen, index) => (
-                                  <div key={almacen.almacen} className="d-flex justify-content-between align-items-center py-1 border-bottom">
-                                    <span className="text-truncate me-2">
-                                      <span className="badge bg-light text-dark border me-1" style={{ fontSize: '0.7em' }}>{index + 1}</span>
-                                      {almacen.almacen}
-                                    </span>
-                                    <span className="badge bg-light text-dark border" style={{ fontSize: '0.75em' }}>{almacen.total}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="text-center text-muted py-5">
-                          <i className="fas fa-chart-bar fa-2x mb-2"></i>
-                          <p className="mb-0">No hay registros</p>
-                        </div>
-                      )}
-                    </div>
                   </div>
                 </div>
 
-                <div className="col-12">
-                  <div className="card border-0 shadow-sm">
-                    <div className="card-header bg-white border-0 d-flex justify-content-between align-items-center">
-                      <h6 className="mb-0 text-uppercase text-muted">
-                        <i className="fas fa-wave-square me-1 text-primary"></i>
-                        Tendencia mensual por estatus
-                      </h6>
-                      <small className="text-muted">Periodo capturado</small>
-                    </div>
-                    <div className="card-body">
-                      {hasMonthlyData ? (
-                        <>
-                          <div className="d-flex flex-wrap gap-3 mb-3">
-                            {balancePorEstatus.map((status) => (
-                              <div
-                                key={status.key}
-                                className="d-flex align-items-center px-3 py-2 rounded-pill bg-light border"
-                              >
-                                <span className="badge rounded-circle me-2 bg-secondary" style={{ width: 10, height: 10 }}></span>
-                                <span className="fw-semibold me-2 text-dark">{status.label}</span>
-                                <span className="text-muted">{status.value}</span>
-                              </div>
-                            ))}
-                          </div>
-                          <div style={{ height: 360 }}>
-                            <Line data={monthlyLineData} options={monthlyLineOptions} />
-                          </div>
-                          <div className="row g-3 mt-3">
-                            {monthlySummary.map((mes) => (
-                              <div key={mes.mes} className="col-md-4">
-                                <div className="border rounded p-3 h-100">
-                                  <div className="d-flex justify-content-between align-items-center mb-2">
-                                    <h6 className="mb-0 text-uppercase text-muted">{mes.mes}</h6>
-                                    <span className="badge bg-dark text-white">{mes.total} total</span>
+                <div className="row g-4">
+                  <div className="col-lg-4">
+                    <div className="card h-100 border-0 shadow-sm">
+                      <div className="card-header bg-white border-0">
+                        <h6 className="mb-0 text-uppercase text-muted">
+                          <i className="fas fa-circle-notch me-1 text-primary"></i>
+                          Estatus global
+                        </h6>
+                      </div>
+                      <div className="card-body">
+                        {estatusChartDataByPeriod.datasets?.[0]?.data?.some((value) => value > 0) ? (
+                          <div className="d-flex flex-column flex-lg-row align-items-center gap-3">
+                            <div style={{ height: 260, width: '100%' }}>
+                              <Pie data={estatusChartDataByPeriod} options={estatusChartOptions} />
+                            </div>
+                            <div className="w-100">
+                              {STATUS_CONFIG.map((status) => {
+                                const value = getRevisionesByPeriod.filter((rev) => rev.estatus === status.key).length;
+                                return (
+                                  <div
+                                    key={status.key}
+                                    className="d-flex justify-content-between align-items-center border rounded py-1 px-2 mb-2 bg-light"
+                                  >
+                                    <div className="d-flex align-items-center">
+                                      <span className="badge rounded-circle me-2" style={{ backgroundColor: status.color, width: 10, height: 10 }}></span>
+                                      <span className="fw-semibold">{status.label}</span>
+                                    </div>
+                                    <span className="text-muted">{value}</span>
                                   </div>
-                                  {mes.breakdown.map((item) => (
-                                    <div
-                                      key={item.key}
-                                      className="d-flex justify-content-between align-items-center small py-1 border-bottom"
-                                    >
-                                      <div className="d-flex align-items-center">
-                                        <span className="badge rounded-circle me-2 bg-secondary" style={{ width: 8, height: 8 }}></span>
-                                        {item.label}
-                                      </div>
-                                      <span className="text-muted">{item.value}</span>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center text-muted py-5">
+                            <i className="fas fa-chart-pie fa-2x mb-2"></i>
+                            <p className="mb-0">Sin datos para el periodo seleccionado</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="col-lg-8">
+                    <div className="card h-100 border-0 shadow-sm">
+                      <div className="card-header bg-white border-0">
+                        <h6 className="mb-0 text-uppercase text-muted">
+                          <i className="fas fa-store-alt me-1 text-primary"></i>
+                          Top almacenes
+                        </h6>
+                      </div>
+                      <div className="card-body">
+                        {topAlmacenesByPeriod.length > 0 ? (
+                          <div className="row g-4">
+                            <div className="col-md-8">
+                              <div style={{ height: 300 }}>
+                                <Bar data={almacenesChartDataByPeriod} options={almacenesChartOptions} />
+                              </div>
+                            </div>
+                            <div className="col-md-4">
+                              <div className="border rounded p-2">
+                                <h6 className="text-muted mb-2 small">Top almacenes</h6>
+                                <div className="small">
+                                  {topAlmacenesByPeriod.map((almacen, index) => (
+                                    <div key={almacen.almacen} className="d-flex justify-content-between align-items-center py-1 border-bottom">
+                                      <span className="text-truncate me-2">
+                                        <span className="badge bg-light text-dark border me-1" style={{ fontSize: '0.7em' }}>{index + 1}</span>
+                                        {almacen.almacen}
+                                      </span>
+                                      <span className="badge bg-light text-dark border" style={{ fontSize: '0.75em' }}>{almacen.total}</span>
                                     </div>
                                   ))}
                                 </div>
                               </div>
-                            ))}
+                            </div>
                           </div>
-                        </>
-                      ) : (
-                        <div className="text-center text-muted py-5">
-                          <i className="fas fa-chart-line fa-2x mb-2"></i>
-                          <p className="mb-0">Registra más información para visualizar la tendencia.</p>
-                        </div>
-                      )}
+                        ) : (
+                          <div className="text-center text-muted py-5">
+                            <i className="fas fa-chart-bar fa-2x mb-2"></i>
+                            <p className="mb-0">No hay datos para el periodo seleccionado</p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
+
+                  {chartTimeTab !== 'dia' && (
+                  <div className="col-12">
+                    <div className="card border-0 shadow-sm">
+                      <div className="card-header bg-white border-0 d-flex justify-content-between align-items-center">
+                        <h6 className="mb-0 text-uppercase text-muted">
+                          <i className="fas fa-wave-square me-1 text-primary"></i>
+                          Tendencia por estatus
+                        </h6>
+                        <small className="text-muted">
+                          {chartTimeTab === 'semana' && 'Últimas 12 semanas'}
+                          {chartTimeTab === 'mes' && 'Periodo mensual'}
+                          {chartTimeTab === 'año' && 'Por año'}
+                        </small>
+                      </div>
+                      <div className="card-body">
+                        {getChartDataByPeriod.datasets?.some((dataset) => dataset.data.some((value) => value > 0)) ? (
+                          <>
+                            <div className="d-flex flex-wrap gap-3 mb-3">
+                              {STATUS_CONFIG.map((status) => {
+                                const value = getRevisionesByPeriod.filter((rev) => rev.estatus === status.key).length;
+                                return (
+                                  <div
+                                    key={status.key}
+                                    className="d-flex align-items-center px-3 py-2 rounded-pill bg-light border"
+                                  >
+                                    <span className="badge rounded-circle me-2" style={{ backgroundColor: status.color, width: 10, height: 10 }}></span>
+                                    <span className="fw-semibold me-2 text-dark">{status.label}</span>
+                                    <span className="text-muted">{value}</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                            <div style={{ height: 360 }}>
+                              <Line data={getChartDataByPeriod} options={monthlyLineOptions} />
+                            </div>
+                          </>
+                        ) : (
+                          <div className="text-center text-muted py-5">
+                            <i className="fas fa-chart-line fa-2x mb-2"></i>
+                            <p className="mb-0">No hay datos para el periodo seleccionado</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 </div>
-              </div>
+              </>
             )}
           </div>
         </div>
