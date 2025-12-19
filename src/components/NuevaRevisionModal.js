@@ -22,6 +22,7 @@ const NuevaRevisionModal = ({ isOpen, onClose, onSubmit, loading }) => {
   // Función para obtener la fecha máxima permitida (hoy)
   const getMaxDate = () => {
     const today = new Date();
+    // Usar zona horaria local para evitar problemas con UTC
     const year = today.getFullYear();
     const month = String(today.getMonth() + 1).padStart(2, '0');
     const day = String(today.getDate()).padStart(2, '0');
@@ -228,7 +229,8 @@ const NuevaRevisionModal = ({ isOpen, onClose, onSubmit, loading }) => {
             name="fechaIncidente"
             value={formData.fechaIncidente}
             onChange={handleInputChange}
-            max={new Date().toISOString().split('T')[0]}
+            max={getMaxDate()}
+            title="Solo se permiten fechas de hoy hacia atrás"
             required
           />
           {errors.fechaIncidente && <div className="invalid-feedback">{errors.fechaIncidente}</div>}
