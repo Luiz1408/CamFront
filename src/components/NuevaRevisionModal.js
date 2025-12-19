@@ -19,6 +19,15 @@ const NuevaRevisionModal = ({ isOpen, onClose, onSubmit, loading }) => {
     areaQueSolicita: ''
   });
 
+  // Función para obtener la fecha máxima permitida (hoy)
+  const getMaxDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const [almacenes, setAlmacenes] = useState([]);
   const [areasSolicita, setAreasSolicita] = useState([]);
   const [loadingCatalogos, setLoadingCatalogos] = useState(false);
@@ -82,12 +91,34 @@ const NuevaRevisionModal = ({ isOpen, onClose, onSubmit, loading }) => {
   }, [isOpen]);
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+  const { name, value } = e.target;
+  
+  // Limpia el error previo si existe
+  if (errors[name]) {
+    setErrors(prev => ({ ...prev, [name]: '' }));
+  }
+
+  // Validación específica para fecha de incidente
+  if (name === 'fechaIncidente' && value) {
+    const selectedDate = new Date(value);
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    
+    if (selectedDate > today) {
+      setErrors(prev => ({
+        ...prev,
+        fechaIncidente: '¡Ups! No somos adivinos del futuro. Por favor, selecciona una fecha actual o pasada.'
+      }));
+      return; // No actualizamos el estado si la fecha es futura
+    }
+  }
+
+  // Actualiza el estado con el nuevo valor
+  setFormData(prev => ({
+    ...prev,
+    [name]: value
+  }));
+};
 
   // Manejador específico para el dropdown de ubicación
   const handleUbicacionChange = (e) => {
