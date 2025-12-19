@@ -1834,19 +1834,6 @@ const CapturaRevisiones = () => {
                             )}
                           </div>
 
-                          {/* Botón limpiar */}
-                          <div className="flex-shrink-0">
-                            <label className="form-label small mb-2">&nbsp;</label>
-                            <button
-                              className="btn btn-outline-secondary btn-sm w-100"
-                              onClick={clearAllFilters}
-                              title="Limpiar filtros y poner día de hoy"
-                            >
-                              <i className="fas fa-times me-1"></i>
-                              Limpiar
-                            </button>
-                          </div>
-
                           {/* Badge informativo */}
                           <div className="flex-shrink-0">
                             <label className="form-label small mb-2">&nbsp;</label>
