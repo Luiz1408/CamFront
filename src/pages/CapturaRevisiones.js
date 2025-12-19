@@ -1665,6 +1665,14 @@ const CapturaRevisiones = () => {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Modal de nueva revisión dentro de la pestaña de tabla */}
+                <NuevaRevisionModal
+                  isOpen={showModal}
+                  onClose={handleCloseModal}
+                  onSubmit={handleSubmitRevision}
+                  loading={loading}
+                />
               </>
             ) : (
               <>
