@@ -569,7 +569,7 @@ const CapturaRevisiones = () => {
   };
 
   // Función para mostrar modal de eliminación directamente
-  const showDeleteModal = () => {
+  const showDeleteModal = (revisionId) => {
     const modal = document.createElement('div');
     modal.className = 'register-modal-backdrop';
     modal.style.position = 'fixed';
@@ -593,7 +593,7 @@ const CapturaRevisiones = () => {
           <p class="recovery-modal__description">¿Estás seguro de eliminar esta revisión? Esta acción no se puede deshacer.</p>
           <div class="d-flex gap-2 justify-content-center">
             <button type="button" class="btn btn-secondary" onclick="this.closest('.register-modal-backdrop').remove()">Cancelar</button>
-            <button type="button" class="btn btn-danger" onclick="window.confirmDelete(${deleteRevisionId})">Eliminar</button>
+            <button type="button" class="btn btn-danger" onclick="window.confirmDelete(${revisionId})">Eliminar</button>
           </div>
         </div>
       </div>
@@ -640,8 +640,7 @@ const CapturaRevisiones = () => {
     }
 
     console.log('Mostrando confirmación de eliminación');
-    setDeleteRevisionId(revisionId);
-    showDeleteModal();
+    showDeleteModal(revisionId);
   };
 
   const handleFechaIncidenteChange = async (revisionId, nuevaFecha) => {
