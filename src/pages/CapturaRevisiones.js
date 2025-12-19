@@ -274,6 +274,9 @@ const CapturaRevisiones = () => {
     message: '',
     type: 'info',
   });
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteRevisionId, setDeleteRevisionId] = useState(null);
+  const [forceRender, setForceRender] = useState(0);
 
   const [user, setUser] = useState(() => {
     const storedUser = localStorage.getItem('user');
@@ -311,7 +314,8 @@ const CapturaRevisiones = () => {
 
   // Funciones para el modal de feedback
   const showFeedback = (title, message, type = 'success', options = {}) => {
-    setModalFeedback({
+    console.log('showFeedback llamado con:', { title, message, type, options });
+    const newFeedback = {
       visible: true,
       title,
       message,
@@ -319,7 +323,9 @@ const CapturaRevisiones = () => {
       showCancel: options.showCancel || false,
       onConfirm: options.onConfirm || null,
       confirmLabel: options.confirmLabel || 'Aceptar'
-    });
+    };
+    setModalFeedback(newFeedback);
+    console.log('modalFeedback establecido a:', newFeedback);
   };
 
   const closeFeedback = () => {
@@ -349,6 +355,16 @@ const CapturaRevisiones = () => {
       document.removeEventListener('keydown', handleKeyDown);
     };
   }, [modalFeedback.visible, modalFeedback.onConfirm, modalFeedback.showCancel, showModal]);
+
+  // Efecto para depurar el estado de modalFeedback
+  useEffect(() => {
+    console.log('modalFeedback cambió:', modalFeedback);
+  }, [modalFeedback]);
+
+  // Efecto para depurar el estado de showDeleteConfirm
+  useEffect(() => {
+    console.log('showDeleteConfirm cambió:', showDeleteConfirm);
+  }, [showDeleteConfirm]);
 
   useEffect(() => {
     cargarDatos();
@@ -552,8 +568,69 @@ const CapturaRevisiones = () => {
     return Math.max(diffDays - 1, 0);
   };
 
+  // Función para mostrar modal de eliminación directamente
+  const showDeleteModal = () => {
+    const modal = document.createElement('div');
+    modal.className = 'register-modal-backdrop';
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100%';
+    modal.style.height = '100%';
+    modal.style.backgroundColor = 'rgba(0,0,0,0.5)';
+    modal.style.zIndex = '9999';
+    modal.style.display = 'flex';
+    modal.style.justifyContent = 'center';
+    modal.style.alignItems = 'center';
+    
+    modal.innerHTML = `
+      <div class="register-modal recovery-modal">
+        <div class="recovery-modal__header bg-warning">
+          <h3 class="mb-0">Confirmar eliminación</h3>
+          <button type="button" class="btn-close" onclick="this.closest('.register-modal-backdrop').remove()"></button>
+        </div>
+        <div class="recovery-modal__body">
+          <p class="recovery-modal__description">¿Estás seguro de eliminar esta revisión? Esta acción no se puede deshacer.</p>
+          <div class="d-flex gap-2 justify-content-center">
+            <button type="button" class="btn btn-secondary" onclick="this.closest('.register-modal-backdrop').remove()">Cancelar</button>
+            <button type="button" class="btn btn-danger" onclick="window.confirmDelete(${deleteRevisionId})">Eliminar</button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Función global para confirmar eliminación
+    window.confirmDelete = async (id) => {
+      try {
+        await deleteRevision(id);
+        setRevisiones((prev) => prev.filter((r) => r.id !== id));
+        modal.remove();
+        showFeedback('Revisión eliminada', 'El registro se eliminó correctamente.', 'success');
+      } catch (error) {
+        console.error('Error eliminando revisión:', error);
+        modal.remove();
+        let errorMessage = 'No se pudo eliminar la revisión. Verifica que el backend esté corriendo e inténtalo de nuevo.';
+        if (error.response?.status === 404) {
+          errorMessage = 'La revisión que intentas eliminar no existe o ya fue eliminada.';
+        } else if (error.response?.status === 403) {
+          errorMessage = 'No tienes permisos para eliminar esta revisión.';
+        } else if (error.response?.status >= 500) {
+          errorMessage = 'Error del servidor. Por favor inténtalo más tarde.';
+        }
+        showFeedback('Error al eliminar', errorMessage, 'danger');
+      }
+    };
+  };
+
   const handleDeleteRevision = (revisionId) => {
+    console.log('Intentando eliminar revisión:', revisionId);
+    console.log('¿Es admin?', isAdmin);
+    console.log('Usuario:', user);
+    
     if (!isAdmin) {
+      console.log('Acceso denegado - no es admin');
       showFeedback(
         'Acceso restringido',
         'Solo un administrador puede eliminar revisiones capturadas.',
@@ -562,40 +639,9 @@ const CapturaRevisiones = () => {
       return;
     }
 
-    showFeedback(
-      'Confirmar eliminación',
-      '¿Estás seguro de eliminar esta revisión? Esta acción no se puede deshacer.',
-      'warning',
-      {
-        showCancel: true,
-        confirmLabel: 'Eliminar',
-        onConfirm: async () => {
-          try {
-            await deleteRevision(revisionId);
-            setRevisiones((prev) => prev.filter((r) => r.id !== revisionId));
-            showFeedback('Revisión eliminada', 'El registro se eliminó correctamente.', 'success');
-          } catch (error) {
-            console.error('Error eliminando revisión:', error);
-            
-            let errorMessage = 'No se pudo eliminar la revisión. Verifica que el backend esté corriendo e inténtalo de nuevo.';
-            
-            if (error.response?.status === 404) {
-              errorMessage = 'La revisión que intentas eliminar no existe o ya fue eliminada.';
-            } else if (error.response?.status === 403) {
-              errorMessage = 'No tienes permisos para eliminar esta revisión.';
-            } else if (error.response?.status >= 500) {
-              errorMessage = 'Error del servidor. Por favor inténtalo más tarde.';
-            }
-            
-            showFeedback(
-              'Error al eliminar',
-              errorMessage,
-              'danger'
-            );
-          }
-        },
-      }
-    );
+    console.log('Mostrando confirmación de eliminación');
+    setDeleteRevisionId(revisionId);
+    showDeleteModal();
   };
 
   const handleFechaIncidenteChange = async (revisionId, nuevaFecha) => {
@@ -609,7 +655,6 @@ const CapturaRevisiones = () => {
       );
       return;
     }
-
     try {
       await updateRevision(revisionId, { fechaIncidente: nuevaFecha });
       setRevisiones((prev) =>
@@ -1990,8 +2035,54 @@ const CapturaRevisiones = () => {
                   loading={loading}
                 />
 
+                {console.log('Renderizando showDeleteConfirm:', showDeleteConfirm, 'forceRender:', forceRender)}
+                {showDeleteConfirm && (
+                  <div key={`delete-${forceRender}`} className="register-modal-backdrop">
+                    <div className="register-modal recovery-modal">
+                      <div className="recovery-modal__header bg-warning">
+                        <h3 className="mb-0">Confirmar eliminación</h3>
+                        <button type="button" className="btn-close" onClick={() => setShowDeleteConfirm(false)} aria-label="Cerrar" />
+                      </div>
+                      <div className="recovery-modal__body">
+                        <p className="recovery-modal__description">¿Estás seguro de eliminar esta revisión? Esta acción no se puede deshacer.</p>
+                        <div className="d-flex gap-2 justify-content-center">
+                          <button type="button" className="btn btn-secondary" onClick={() => setShowDeleteConfirm(false)}>
+                            Cancelar
+                          </button>
+                          <button 
+                            type="button" 
+                            className="btn btn-danger" 
+                            onClick={async () => {
+                              try {
+                                console.log('Ejecutando eliminación de revisión:', deleteRevisionId);
+                                await deleteRevision(deleteRevisionId);
+                                setRevisiones((prev) => prev.filter((r) => r.id !== deleteRevisionId));
+                                setShowDeleteConfirm(false);
+                                showFeedback('Revisión eliminada', 'El registro se eliminó correctamente.', 'success');
+                              } catch (error) {
+                                console.error('Error eliminando revisión:', error);
+                                let errorMessage = 'No se pudo eliminar la revisión. Verifica que el backend esté corriendo e inténtalo de nuevo.';
+                                if (error.response?.status === 404) {
+                                  errorMessage = 'La revisión que intentas eliminar no existe o ya fue eliminada.';
+                                } else if (error.response?.status === 403) {
+                                  errorMessage = 'No tienes permisos para eliminar esta revisión.';
+                                } else if (error.response?.status >= 500) {
+                                  errorMessage = 'Error del servidor. Por favor inténtalo más tarde.';
+                                }
+                                showFeedback('Error al eliminar', errorMessage, 'danger');
+                              }
+                            }}
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {modalFeedback.visible && (
-                  <div className="register-modal-backdrop">
+                  <div key={`feedback-${Date.now()}`} className="register-modal-backdrop">
                     <div className="register-modal recovery-modal">
                       <div className={`recovery-modal__header bg-${modalFeedback.type === 'danger' ? 'danger' : modalFeedback.type === 'warning' ? 'warning' : 'success'}`}>
                         <h3 className="mb-0">{modalFeedback.title}</h3>
