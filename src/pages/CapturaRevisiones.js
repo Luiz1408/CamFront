@@ -570,9 +570,11 @@ const CapturaRevisiones = () => {
 
   // Función para mostrar modal de eliminación directamente
   const showDeleteModal = (revisionId) => {
-    // Buscar el contenedor de la pestaña de tablas
-    const tablaContainer = document.querySelector('[data-tab="tabla"]');
-    const targetContainer = tablaContainer || document.body;
+    // Solo mostrar modal si estamos en la pestaña de tablas
+    if (activeTab !== 'tabla') {
+      console.log('Modal de eliminación bloqueado: no está en la pestaña de tablas');
+      return;
+    }
     
     const modal = document.createElement('div');
     modal.className = 'register-modal-backdrop';
@@ -603,7 +605,7 @@ const CapturaRevisiones = () => {
       </div>
     `;
     
-    targetContainer.appendChild(modal);
+    document.body.appendChild(modal);
     
     // Función global para confirmar eliminación
     window.confirmDelete = async (id) => {
