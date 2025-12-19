@@ -92,34 +92,40 @@ const NuevaRevisionModal = ({ isOpen, onClose, onSubmit, loading }) => {
   }, [isOpen]);
 
   const handleInputChange = (e) => {
-  const { name, value } = e.target;
-  
-  // Limpia el error previo si existe
-  if (errors[name]) {
-    setErrors(prev => ({ ...prev, [name]: '' }));
-  }
-
-  // Validación específica para fecha de incidente
-  if (name === 'fechaIncidente' && value) {
-    const selectedDate = new Date(value);
-    const today = new Date();
-    today.setHours(23, 59, 59, 999);
+    const { name, value } = e.target;
     
-    if (selectedDate > today) {
-      setErrors(prev => ({
-        ...prev,
-        fechaIncidente: '¡Ups! No somos adivinos del futuro. Por favor, selecciona una fecha actual o pasada.'
-      }));
-      return; // No actualizamos el estado si la fecha es futura
+    // Validación específica para fecha de incidente
+    if (name === 'fechaIncidente' && value) {
+      const selectedDate = new Date(value);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      
+      if (selectedDate > today) {
+        setErrors(prev => ({
+          ...prev,
+          fechaIncidente: '¡Ups! No somos adivinos del futuro. Por favor, selecciona una fecha actual o pasada.'
+        }));
+        // No actualizamos el estado si la fecha es futura
+        return;
+      }
+      
+      // Limpiar el error si la fecha es válida
+      if (errors.fechaIncidente) {
+        setErrors(prev => ({ ...prev, fechaIncidente: '' }));
+      }
     }
-  }
+    
+    // Limpia el error previo para otros campos si existe
+    if (name !== 'fechaIncidente' && errors[name]) {
+      setErrors(prev => ({ ...prev, [name]: '' }));
+    }
 
-  // Actualiza el estado con el nuevo valor
-  setFormData(prev => ({
-    ...prev,
-    [name]: value
-  }));
-};
+    // Actualiza el estado con el nuevo valor
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
 
   // Manejador específico para el dropdown de ubicación
   const handleUbicacionChange = (e) => {
