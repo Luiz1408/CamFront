@@ -96,11 +96,17 @@ const NuevaRevisionModal = ({ isOpen, onClose, onSubmit, loading }) => {
     
     // Validación específica para fecha de incidente
     if (name === 'fechaIncidente' && value) {
+      console.log('Validando fecha:', value);
       const selectedDate = new Date(value);
       const today = new Date();
       today.setHours(23, 59, 59, 999);
       
+      console.log('Fecha seleccionada:', selectedDate);
+      console.log('Fecha actual:', today);
+      console.log('Es futura?', selectedDate > today);
+      
       if (selectedDate > today) {
+        console.log('Fecha futura detectada, mostrando error');
         setErrors(prev => ({
           ...prev,
           fechaIncidente: '¡Ups! No somos adivinos del futuro. Por favor, selecciona una fecha actual o pasada.'
