@@ -1004,8 +1004,9 @@ const CapturaRevisiones = () => {
       // Día específico seleccionado
       if (selectedDay) {
         fechaInicio = new Date(selectedDay);
+        fechaInicio.setHours(0, 0, 0, 0); // Inicio del día seleccionado
         fechaFin = new Date(selectedDay);
-        fechaFin.setDate(fechaFin.getDate() + 1); // Incluir todo el día
+        fechaFin.setHours(23, 59, 59, 999); // Fin del día seleccionado
       } else {
         // Si no hay día seleccionado, usar hoy
         fechaInicio = new Date();
