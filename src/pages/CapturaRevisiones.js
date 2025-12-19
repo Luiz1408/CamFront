@@ -2038,52 +2038,6 @@ const CapturaRevisiones = () => {
                   loading={loading}
                 />
 
-                {console.log('Renderizando showDeleteConfirm:', showDeleteConfirm, 'forceRender:', forceRender)}
-                {showDeleteConfirm && (
-                  <div key={`delete-${forceRender}`} className="register-modal-backdrop">
-                    <div className="register-modal recovery-modal">
-                      <div className="recovery-modal__header bg-warning">
-                        <h3 className="mb-0">Confirmar eliminación</h3>
-                        <button type="button" className="btn-close" onClick={() => setShowDeleteConfirm(false)} aria-label="Cerrar" />
-                      </div>
-                      <div className="recovery-modal__body">
-                        <p className="recovery-modal__description">¿Estás seguro de eliminar esta revisión? Esta acción no se puede deshacer.</p>
-                        <div className="d-flex gap-2 justify-content-center">
-                          <button type="button" className="btn btn-secondary" onClick={() => setShowDeleteConfirm(false)}>
-                            Cancelar
-                          </button>
-                          <button 
-                            type="button" 
-                            className="btn btn-danger" 
-                            onClick={async () => {
-                              try {
-                                console.log('Ejecutando eliminación de revisión:', deleteRevisionId);
-                                await deleteRevision(deleteRevisionId);
-                                setRevisiones((prev) => prev.filter((r) => r.id !== deleteRevisionId));
-                                setShowDeleteConfirm(false);
-                                showFeedback('Revisión eliminada', 'El registro se eliminó correctamente.', 'success');
-                              } catch (error) {
-                                console.error('Error eliminando revisión:', error);
-                                let errorMessage = 'No se pudo eliminar la revisión. Verifica que el backend esté corriendo e inténtalo de nuevo.';
-                                if (error.response?.status === 404) {
-                                  errorMessage = 'La revisión que intentas eliminar no existe o ya fue eliminada.';
-                                } else if (error.response?.status === 403) {
-                                  errorMessage = 'No tienes permisos para eliminar esta revisión.';
-                                } else if (error.response?.status >= 500) {
-                                  errorMessage = 'Error del servidor. Por favor inténtalo más tarde.';
-                                }
-                                showFeedback('Error al eliminar', errorMessage, 'danger');
-                              }
-                            }}
-                          >
-                            Eliminar
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 {modalFeedback.visible && (
                   <div key={`feedback-${Date.now()}`} className="register-modal-backdrop">
                     <div className="register-modal recovery-modal">
