@@ -613,7 +613,7 @@ const CapturaRevisiones = () => {
         await deleteRevision(id);
         setRevisiones((prev) => prev.filter((r) => r.id !== id));
         modal.remove();
-        showFeedback('Revisión eliminada', 'El registro se eliminó correctamente.', 'success');
+        // Eliminado el mensaje de éxito - no mostrar alerta
       } catch (error) {
         console.error('Error eliminando revisión:', error);
         modal.remove();
