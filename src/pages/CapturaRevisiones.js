@@ -104,10 +104,46 @@ const CapturaRevisiones = () => {
   const [monitoristas, setMonitoristas] = useState([]);
   const [activeTab, setActiveTab] = useState('tabla');
   const [chartTimeTab, setChartTimeTab] = useState('mes'); // Estado para pestañas de tiempo en gráficas
-  const [selectedDay, setSelectedDay] = useState(''); // Estado para filtro de día específico
+  // Función para obtener la fecha máxima permitida (hoy) - ajustada a zona horaria local
+  const getMaxDate = () => {
+    const today = new Date();
+    // Usar zona horaria local para evitar problemas con UTC
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  // Inicializar con la fecha de hoy para evitar fechas futuras
+  const todayString = getMaxDate();
+
+  const [selectedDay, setSelectedDay] = useState(todayString); // Inicializar con fecha de hoy
   const [selectedWeek, setSelectedWeek] = useState(''); // Estado para filtro de semana específica
   const [selectedYear, setSelectedYear] = useState(''); // Estado para filtro de año específico
-  const [originalDay, setOriginalDay] = useState(''); // Estado para mantener el día original como referencia
+  const [originalDay, setOriginalDay] = useState(todayString); // Inicializar con fecha de hoy
+
+  // Efecto para corregir fechas futuras en selectedDay
+  useEffect(() => {
+    if (selectedDay) {
+      const selectedDate = new Date(selectedDay);
+      const today = new Date();
+      today.setHours(23, 59, 59, 999);
+      if (selectedDate > today) {
+        const todayString = getMaxDate(); // Usar la misma función para consistencia
+        setSelectedDay(todayString);
+        setOriginalDay(todayString);
+      }
+    }
+  }, [selectedDay]);
+
+  // Efecto inicial para corregir fechas futuras al montar
+  useEffect(() => {
+    const todayString = getMaxDate();
+    if (selectedDay && selectedDay > todayString) {
+      setSelectedDay(todayString);
+      setOriginalDay(todayString);
+    }
+  }, []); // Solo al montar
 
   // Función para sincronizar filtros cuando cambia el periodo
   const syncFilters = (newTab) => {
@@ -213,13 +249,13 @@ const CapturaRevisiones = () => {
 
   // Función para limpiar todos los filtros y poner día de hoy
   const clearAllFilters = () => {
-    const today = new Date();
-    const todayString = today.toISOString().split('T')[0];
+    const todayString = getMaxDate(); // Usar la función con zona horaria local
     setSelectedDay(todayString);
     setOriginalDay(todayString); // También establecemos el día original
     setSelectedWeek('');
     setMesSeleccionadoTopAlmacenes('');
     setSelectedYear('');
+    setFiltroUbicacionGraficas(''); // Limpiar filtro de ubicación en gráficas
     // No cambiamos la pestaña, mantenemos la actual
   };
 
@@ -231,6 +267,7 @@ const CapturaRevisiones = () => {
   const [filtroQuienRealiza, setFiltroQuienRealiza] = useState('');
   const [filtroEstatus, setFiltroEstatus] = useState('');
   const [mesSeleccionadoTopAlmacenes, setMesSeleccionadoTopAlmacenes] = useState('');
+  const [filtroUbicacionGraficas, setFiltroUbicacionGraficas] = useState('');
   const [modalFeedback, setModalFeedback] = useState({
     visible: false,
     title: '',
@@ -736,6 +773,7 @@ const CapturaRevisiones = () => {
   });
 
   const almacenesUnicos = [...new Set(revisiones.map(r => r.almacen))];
+  const ubicacionesUnicas = [...new Set(revisiones.map(r => r.ubicacion).filter(Boolean))];
   const areasUnicas = [...new Set(revisiones.map(r => r.areaSolicita))];
   const quienesRealizanUnicos = [...new Set(revisiones.map(r => r.quienRealiza).filter(Boolean))];
   const estatusUnicos = [...new Set(revisiones.map(r => r.estatus))];
@@ -1024,9 +1062,20 @@ const CapturaRevisiones = () => {
     return revisionesConEstatusActualizado.filter(revision => {
       if (!revision.fechaRegistro) return false;
       const fechaRevision = new Date(revision.fechaRegistro);
-      return fechaRevision >= fechaInicio && fechaRevision <= fechaFin;
+      const hoy = new Date();
+      hoy.setHours(23, 59, 59, 999); // Fin de hoy
+      
+      // Excluir fechas futuras
+      if (fechaRevision > hoy) return false;
+      
+      const fechaValida = fechaRevision >= fechaInicio && fechaRevision <= fechaFin;
+      
+      // Aplicar filtro por ubicación si está seleccionado
+      const ubicacionValida = !filtroUbicacionGraficas || revision.ubicacion === filtroUbicacionGraficas;
+      
+      return fechaValida && ubicacionValida;
     });
-  }, [revisionesConEstatusActualizado, chartTimeTab, selectedDay, selectedWeek, mesSeleccionadoTopAlmacenes, selectedYear]);
+  }, [revisionesConEstatusActualizado, chartTimeTab, selectedDay, selectedWeek, mesSeleccionadoTopAlmacenes, selectedYear, filtroUbicacionGraficas]);
 
   // Estatus chart data filtrado por periodo
   const estatusChartDataByPeriod = useMemo(() => {
@@ -1370,19 +1419,6 @@ const CapturaRevisiones = () => {
                             </select>
                           </div>
                           <div className="col-md-2">
-                            <label className="form-label small">Almacén/Sucursal</label>
-                            <select 
-                              className="form-select form-select-sm"
-                              value={filtroAlmacen}
-                              onChange={(e) => setFiltroAlmacen(e.target.value)}
-                            >
-                              <option value="">Todos</option>
-                              {almacenesUnicos.map(almacen => (
-                                <option key={almacen} value={almacen}>{almacen}</option>
-                              ))}
-                            </select>
-                          </div>
-                          <div className="col-md-2">
                             <label className="form-label small">Área que Solicita</label>
                             <select 
                               className="form-select form-select-sm"
@@ -1516,8 +1552,15 @@ const CapturaRevisiones = () => {
                                 type="date"
                                 className="form-control form-control-sm border-0 bg-light"
                                 value={revision.fechaIncidente}
-                                onChange={(e) => handleFechaIncidenteChange(revision.id, e.target.value)}
-                                max={new Date().toISOString().split('T')[0]}
+                                onChange={(e) => {
+                                  const selectedDate = new Date(e.target.value);
+                                  const today = new Date();
+                                  today.setHours(23, 59, 59, 999);
+                                  if (selectedDate <= today) {
+                                    handleFechaIncidenteChange(revision.id, e.target.value);
+                                  }
+                                }}
+                                max={getMaxDate()}
                                 title="Solo se permiten fechas de hoy hacia atrás"
                               />
                             </div>
@@ -1642,128 +1685,169 @@ const CapturaRevisiones = () => {
                             Limpiar
                           </button>
                         </div>
-                        <ul className="nav nav-pills nav-pills-lg" role="tablist">
-                          <li className="nav-item" role="presentation">
-                            <button
-                              className={`nav-link ${chartTimeTab === 'dia' ? 'active' : ''}`}
-                              onClick={() => handleChartTimeTabChange('dia')}
-                              type="button"
+                        {/* Primera fila: Pestañas de periodo */}
+                        <div className="d-flex justify-content-start mb-3">
+                          <ul className="nav nav-pills nav-pills-lg" role="tablist">
+                            <li className="nav-item" role="presentation">
+                              <button
+                                className={`nav-link ${chartTimeTab === 'dia' ? 'active' : ''}`}
+                                onClick={() => handleChartTimeTabChange('dia')}
+                                type="button"
+                              >
+                                <i className="fas fa-calendar-day me-2"></i>
+                                Día
+                              </button>
+                            </li>
+                            <li className="nav-item" role="presentation">
+                              <button
+                                className={`nav-link ${chartTimeTab === 'semana' ? 'active' : ''}`}
+                                onClick={() => handleChartTimeTabChange('semana')}
+                                type="button"
+                              >
+                                <i className="fas fa-calendar-week me-2"></i>
+                                Semana
+                              </button>
+                            </li>
+                            <li className="nav-item" role="presentation">
+                              <button
+                                className={`nav-link ${chartTimeTab === 'mes' ? 'active' : ''}`}
+                                onClick={() => handleChartTimeTabChange('mes')}
+                                type="button"
+                              >
+                                <i className="fas fa-calendar-alt me-2"></i>
+                                Mes
+                              </button>
+                            </li>
+                            <li className="nav-item" role="presentation">
+                              <button
+                                className={`nav-link ${chartTimeTab === 'año' ? 'active' : ''}`}
+                                onClick={() => handleChartTimeTabChange('año')}
+                                type="button"
+                              >
+                                <i className="fas fa-calendar me-2"></i>
+                                Año
+                              </button>
+                            </li>
+                          </ul>
+                        </div>
+
+                        {/* Segunda fila: Filtros específicos */}
+                        <div className="d-flex flex-wrap gap-3 p-3 bg-light rounded-3 border align-items-end">
+                          {/* Filtro por Ubicación */}
+                          <div className="flex-shrink-0">
+                            <label className="form-label small fw-semibold text-primary mb-2">
+                              <i className="fas fa-map-marker-alt me-2"></i>
+                              Ubicación
+                            </label>
+                            <select 
+                              className="form-select form-select-sm border-2 shadow-sm"
+                              style={{ borderColor: '#6366f1', borderRadius: '8px', minWidth: '150px' }}
+                              value={filtroUbicacionGraficas}
+                              onChange={(e) => setFiltroUbicacionGraficas(e.target.value)}
                             >
-                              <i className="fas fa-calendar-day me-2"></i>
-                              Día
-                            </button>
-                          </li>
-                          <li className="nav-item" role="presentation">
-                            <button
-                              className={`nav-link ${chartTimeTab === 'semana' ? 'active' : ''}`}
-                              onClick={() => handleChartTimeTabChange('semana')}
-                              type="button"
-                            >
-                              <i className="fas fa-calendar-week me-2"></i>
-                              Semana
-                            </button>
-                          </li>
-                          <li className="nav-item" role="presentation">
-                            <button
-                              className={`nav-link ${chartTimeTab === 'mes' ? 'active' : ''}`}
-                              onClick={() => handleChartTimeTabChange('mes')}
-                              type="button"
-                            >
-                              <i className="fas fa-calendar-alt me-2"></i>
-                              Mes
-                            </button>
-                          </li>
-                          <li className="nav-item" role="presentation">
-                            <button
-                              className={`nav-link ${chartTimeTab === 'año' ? 'active' : ''}`}
-                              onClick={() => handleChartTimeTabChange('año')}
-                              type="button"
-                            >
-                              <i className="fas fa-calendar me-2"></i>
-                              Año
-                            </button>
-                          </li>
-                        </ul>
-                        <div className="mt-3">
-                          <small className="text-muted">
-                            {chartTimeTab === 'dia' && 'Mostrando datos de un día específico'}
-                            {chartTimeTab === 'semana' && 'Mostrando datos de una semana específica'}
-                            {chartTimeTab === 'mes' && 'Mostrando datos de un mes específico'}
-                            {chartTimeTab === 'año' && 'Mostrando datos de un año específico'}
-                          </small>
-                          <div className="mt-2">
+                              <option value="">Todas</option>
+                              {ubicacionesUnicas.map(ubicacion => (
+                                <option key={ubicacion} value={ubicacion}>{ubicacion}</option>
+                              ))}
+                            </select>
+                          </div>
+
+                          {/* Filtro específico según el periodo */}
+                          <div className="flex-shrink-0">
+                            <label className="form-label small fw-semibold text-primary mb-2">
+                              {chartTimeTab === 'dia' && <><i className="fas fa-calendar-day me-2"></i>Día</>}
+                              {chartTimeTab === 'semana' && <><i className="fas fa-calendar-week me-2"></i>Semana</>}
+                              {chartTimeTab === 'mes' && <><i className="fas fa-calendar-alt me-2"></i>Mes</>}
+                              {chartTimeTab === 'año' && <><i className="fas fa-calendar me-2"></i>Año</>}
+                            </label>
                             {chartTimeTab === 'dia' && (
-                              <div className="d-flex align-items-center gap-2">
-                                <input
-                                  type="date"
-                                  className="form-select form-select-sm d-inline-block w-auto"
-                                  value={selectedDay}
-                                  onChange={(e) => setSelectedDay(e.target.value)}
-                                  max={new Date().toISOString().split('T')[0]}
-                                  title="Solo se permiten fechas de hoy hacia atrás"
-                                />
-                                <small className="text-muted">
-                                  {selectedDay ? `Día: ${selectedDay}` : 'Selecciona un día'}
-                                </small>
-                              </div>
+                              <input
+                                type="date"
+                                className="form-control form-control-sm border-2 shadow-sm"
+                                style={{ borderColor: '#6366f1', borderRadius: '8px', minWidth: '150px' }}
+                                value={selectedDay}
+                                onChange={(e) => {
+                                  const selectedDate = new Date(e.target.value);
+                                  const today = new Date();
+                                  today.setHours(23, 59, 59, 999);
+                                  if (selectedDate <= today) {
+                                    setSelectedDay(e.target.value);
+                                  }
+                                }}
+                                max={getMaxDate()}
+                                title="Solo se permiten fechas de hoy hacia atrás"
+                              />
                             )}
                             {chartTimeTab === 'semana' && (
-                              <div className="d-flex align-items-center gap-2">
-                                <select
-                                  className="form-select form-select-sm d-inline-block w-auto"
-                                  value={selectedWeek}
-                                  onChange={(e) => setSelectedWeek(e.target.value)}
-                                >
-                                  <option value="">Seleccionar semana</option>
-                                  {generateWeeks().map((week) => (
-                                    <option key={week.value} value={week.value}>
-                                      {week.label}
-                                    </option>
-                                  ))}
-                                </select>
-                                <small className="text-muted">
-                                  {selectedWeek ? `Semana ${selectedWeek} seleccionada` : 'Selecciona una semana'}
-                                </small>
-                              </div>
+                              <select
+                                className="form-select form-select-sm border-2 shadow-sm"
+                                style={{ borderColor: '#6366f1', borderRadius: '8px', minWidth: '200px' }}
+                                value={selectedWeek}
+                                onChange={(e) => setSelectedWeek(e.target.value)}
+                              >
+                                <option value="">Seleccionar semana</option>
+                                {generateWeeks().map((week) => (
+                                  <option key={week.value} value={week.value}>
+                                    {week.label}
+                                  </option>
+                                ))}
+                              </select>
                             )}
                             {chartTimeTab === 'mes' && (
-                              <div className="d-flex align-items-center gap-2">
-                                <select
-                                  className="form-select form-select-sm d-inline-block w-auto"
-                                  value={mesSeleccionadoTopAlmacenes}
-                                  onChange={(e) => setMesSeleccionadoTopAlmacenes(e.target.value)}
-                                >
-                                  <option value="">Todos los meses</option>
-                                  {mesesDisponibles.map((mes) => (
-                                    <option key={mes} value={mes}>
-                                      {mes}
-                                    </option>
-                                  ))}
-                                </select>
-                                <small className="text-muted">
-                                  {mesSeleccionadoTopAlmacenes ? `Mes: ${mesSeleccionadoTopAlmacenes}` : 'Todos los meses'}
-                                </small>
-                              </div>
+                              <select
+                                className="form-select form-select-sm border-2 shadow-sm"
+                                style={{ borderColor: '#6366f1', borderRadius: '8px', minWidth: '150px' }}
+                                value={mesSeleccionadoTopAlmacenes}
+                                onChange={(e) => setMesSeleccionadoTopAlmacenes(e.target.value)}
+                              >
+                                <option value="">Todos los meses</option>
+                                {mesesDisponibles.map((mes) => (
+                                  <option key={mes} value={mes}>
+                                    {mes}
+                                  </option>
+                                ))}
+                              </select>
                             )}
                             {chartTimeTab === 'año' && (
-                              <div className="d-flex align-items-center gap-2">
-                                <select
-                                  className="form-select form-select-sm d-inline-block w-auto"
-                                  value={selectedYear}
-                                  onChange={(e) => setSelectedYear(e.target.value)}
-                                >
-                                  <option value="">Seleccionar año</option>
-                                  {generateYears().map((year) => (
-                                    <option key={year.value} value={year.value}>
-                                      {year.label}
-                                    </option>
-                                  ))}
-                                </select>
-                                <small className="text-muted">
-                                  {selectedYear ? `Año: ${selectedYear}` : 'Selecciona un año'}
-                                </small>
-                              </div>
+                              <select
+                                className="form-select form-select-sm border-2 shadow-sm"
+                                style={{ borderColor: '#6366f1', borderRadius: '8px', minWidth: '120px' }}
+                                value={selectedYear}
+                                onChange={(e) => setSelectedYear(e.target.value)}
+                              >
+                                <option value="">Seleccionar año</option>
+                                {generateYears().map((year) => (
+                                  <option key={year.value} value={year.value}>
+                                    {year.label}
+                                  </option>
+                                ))}
+                              </select>
                             )}
+                          </div>
+
+                          {/* Botón limpiar */}
+                          <div className="flex-shrink-0">
+                            <label className="form-label small mb-2">&nbsp;</label>
+                            <button
+                              className="btn btn-outline-secondary btn-sm w-100"
+                              onClick={clearAllFilters}
+                              title="Limpiar filtros y poner día de hoy"
+                            >
+                              <i className="fas fa-times me-1"></i>
+                              Limpiar
+                            </button>
+                          </div>
+
+                          {/* Badge informativo */}
+                          <div className="flex-shrink-0">
+                            <label className="form-label small mb-2">&nbsp;</label>
+                            <div className="badge bg-primary bg-opacity-10 text-primary px-3 py-2 rounded-pill">
+                              <i className="fas fa-info-circle me-1"></i>
+                              {chartTimeTab === 'dia' && (selectedDay ? `Día: ${selectedDay}` : 'Sin día')}
+                              {chartTimeTab === 'semana' && (selectedWeek ? `Semana ${selectedWeek}` : 'Sin semana')}
+                              {chartTimeTab === 'mes' && (mesSeleccionadoTopAlmacenes ? mesSeleccionadoTopAlmacenes : 'Todos')}
+                              {chartTimeTab === 'año' && (selectedYear ? `Año: ${selectedYear}` : 'Sin año')}
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1903,60 +1987,59 @@ const CapturaRevisiones = () => {
                     </div>
                   </div>
                 )}
+                <NuevaRevisionModal
+                  isOpen={showModal}
+                  onClose={handleCloseModal}
+                  onSubmit={handleSubmitRevision}
+                  loading={loading}
+                />
+
+                {modalFeedback.visible && (
+                  <div className="register-modal-backdrop">
+                    <div className="register-modal recovery-modal">
+                      <div className={`recovery-modal__header bg-${modalFeedback.type === 'danger' ? 'danger' : modalFeedback.type === 'warning' ? 'warning' : 'success'}`}>
+                        <h3 className="mb-0">{modalFeedback.title}</h3>
+                        <button type="button" className="btn-close" onClick={closeFeedback} aria-label="Cerrar" />
+                      </div>
+                      <div className="recovery-modal__body">
+                        <p className="recovery-modal__description">{modalFeedback.message}</p>
+                        <div className="d-flex gap-2 justify-content-center">
+                          {modalFeedback.showCancel && (
+                            <button type="button" className="btn btn-secondary" onClick={closeFeedback}>
+                              Cancelar
+                            </button>
+                          )}
+                          {modalFeedback.onConfirm ? (
+                            <button
+                              type="button"
+                              className={`btn btn-${modalFeedback.type === 'danger' ? 'danger' : modalFeedback.type === 'warning' ? 'warning' : 'success'}`}
+                              onClick={() => {
+                                if (modalFeedback.onConfirm) modalFeedback.onConfirm();
+                                closeFeedback();
+                              }}
+                            >
+                              {modalFeedback.confirmLabel || 'Aceptar'}
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              onClick={closeFeedback}
+                            >
+                              {modalFeedback.confirmLabel || 'Aceptar'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 </div>
               </>
             )}
           </div>
         </div>
       </main>
-
-      <NuevaRevisionModal
-        isOpen={showModal}
-        onClose={handleCloseModal}
-        onSubmit={handleSubmitRevision}
-        loading={loading}
-      />
-
-      {modalFeedback.visible && (
-        <div className="register-modal-backdrop">
-          <div className="register-modal recovery-modal">
-            <div className={`recovery-modal__header bg-${modalFeedback.type === 'danger' ? 'danger' : modalFeedback.type === 'warning' ? 'warning' : 'success'}`}>
-              <h3 className="mb-0">{modalFeedback.title}</h3>
-              <button type="button" className="btn-close" onClick={closeFeedback} aria-label="Cerrar" />
-            </div>
-            <div className="recovery-modal__body">
-              <p className="recovery-modal__description">{modalFeedback.message}</p>
-              <div className="d-flex gap-2 justify-content-center">
-                {modalFeedback.showCancel && (
-                  <button type="button" className="btn btn-secondary" onClick={closeFeedback}>
-                    Cancelar
-                  </button>
-                )}
-                {modalFeedback.onConfirm ? (
-                  <button
-                    type="button"
-                    className={`btn btn-${modalFeedback.type === 'danger' ? 'danger' : modalFeedback.type === 'warning' ? 'warning' : 'success'}`}
-                    onClick={() => {
-                      if (modalFeedback.onConfirm) modalFeedback.onConfirm();
-                      closeFeedback();
-                    }}
-                  >
-                    {modalFeedback.confirmLabel || 'Aceptar'}
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    onClick={closeFeedback}
-                  >
-                    {modalFeedback.confirmLabel || 'Aceptar'}
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
