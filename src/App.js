@@ -9,6 +9,7 @@ import CapturaRevisiones from './pages/CapturaRevisiones';
 import Charts from './pages/Charts';
 import EntregaTurnoMonitoreo from './pages/EntregaTurnoMonitoreo';
 import PlaneacionTecnica from './pages/PlaneacionTecnica';
+import CronogramaSoporte from './pages/CronogramaSoporte';
 import AdminCatalogos from './components/AdminCatalogos';
 import PrivateRoute from './components/PrivateRoute';
 
@@ -56,6 +57,14 @@ function App() {
             element={
               <PrivateRoute>
                 <PlaneacionTecnica />
+              </PrivateRoute>
+            }
+          />
+          <Route
+            path="/cronograma-soporte"
+            element={
+              <PrivateRoute>
+                <CronogramaSoporte />
               </PrivateRoute>
             }
           />
