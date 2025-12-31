@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { getUsersByRole } from '../services/api';
+import ModernModal from '../components/Common/ModernModal';
 import { getCatalogoByTipo, getAllTipos } from '../services/catalogos';
 import { 
   getShiftHandOffNotes, 
@@ -13,7 +13,7 @@ import AutocompleteDropdown from '../components/AutocompleteDropdown';
 import UnifiedModal from '../components/Common/UnifiedModal';
 import MainNavbar from '../components/Layout/MainNavbar';
 import Footer from '../components/Layout/Footer';
-import '../components/Common/UnifiedModal.css';
+import '../components/Common/ModernModal.css';
 import './EntregaTurnoMonitoreo.css';
 
 const TURNOS = [
@@ -513,14 +513,14 @@ const EntregaTurnoMonitoreo = () => {
       </div>
 
       {/* Modal para nueva entrega */}
-      <UnifiedModal
-        show={showModal}
-        onClose={() => setShowModal(false)}
-        title="Nueva Entrega de Turno"
-        onSubmit={handleSubmit}
-        submitText="Guardar Entrega"
-        loading={false}
-      >
+      <ModernModal
+  show={showModal}
+  onClose={() => setShowModal(false)}
+  title="Nueva Entrega de Turno"
+  onSubmit={handleSubmit}
+  submitText="Guardar Entrega"
+  loading={false}
+>
         <form onSubmit={handleSubmit}>
           <div className='row mb-3'>
             <div className='col-12'>
@@ -748,8 +748,7 @@ const EntregaTurnoMonitoreo = () => {
             )}
           </div>
         </form>
-      </UnifiedModal>
-
+</ModernModal>
       <Footer />
     </div>
   );
