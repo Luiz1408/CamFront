@@ -10,10 +10,10 @@ import {
 } from '../services/shiftHandOffService';
 import { toast } from 'react-toastify';
 import AutocompleteDropdown from '../components/AutocompleteDropdown';
-import UnifiedModal from '../components/Common/UnifiedModal';
+import ModernModal from '../components/Common/ModernModal';
 import MainNavbar from '../components/Layout/MainNavbar';
 import Footer from '../components/Layout/Footer';
-import '../components/Common/UnifiedModal.css';
+import '../components/Common/ModernModal.css';
 import './EntregaTurnoMonitoreo.css';
 
 const TURNOS = [
@@ -513,7 +513,7 @@ const EntregaTurnoMonitoreo = () => {
       </div>
 
       {/* Modal para nueva entrega */}
-      <UnifiedModal
+      <ModernModal
         show={showModal}
         onClose={() => setShowModal(false)}
         title="Nueva Entrega de Turno"
@@ -748,7 +748,7 @@ const EntregaTurnoMonitoreo = () => {
             )}
           </div>
         </form>
-      </UnifiedModal>
+      </ModernModal>
 
       <Footer />
     </div>
