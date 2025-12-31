@@ -10,7 +10,6 @@ import {
 } from '../services/shiftHandOffService';
 import { toast } from 'react-toastify';
 import AutocompleteDropdown from '../components/AutocompleteDropdown';
-import ModernModal from '../components/Common/ModernModal';
 import MainNavbar from '../components/Layout/MainNavbar';
 import Footer from '../components/Layout/Footer';
 import '../components/Common/ModernModal.css';
@@ -514,7 +513,6 @@ const EntregaTurnoMonitoreo = () => {
 
       {/* Modal para nueva entrega */}
       <ModernModal
-<<<<<<< HEAD
         show={showModal}
         onClose={() => setShowModal(false)}
         title="Nueva Entrega de Turno"
@@ -522,15 +520,6 @@ const EntregaTurnoMonitoreo = () => {
         submitText="Guardar Entrega"
         loading={false}
       >
-=======
-  show={showModal}
-  onClose={() => setShowModal(false)}
-  title="Nueva Entrega de Turno"
-  onSubmit={handleSubmit}
-  submitText="Guardar Entrega"
-  loading={false}
->
->>>>>>> 97d11953f7aca80a4415d931562b1a2579b39b77
         <form onSubmit={handleSubmit}>
           <div className='row mb-3'>
             <div className='col-12'>
@@ -758,12 +747,8 @@ const EntregaTurnoMonitoreo = () => {
             )}
           </div>
         </form>
-<<<<<<< HEAD
       </ModernModal>
 
-=======
-</ModernModal>
->>>>>>> 97d11953f7aca80a4415d931562b1a2579b39b77
       <Footer />
     </div>
   );
