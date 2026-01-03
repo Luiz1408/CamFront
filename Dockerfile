@@ -1,35 +1,25 @@
-
-# Multi-stage build for ASP.NET Core 8.0
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+# Etapa de build con Node
+FROM node:18 AS build
 WORKDIR /app
-EXPOSE 80
-EXPOSE 443
 
-# Build stage
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
-WORKDIR /src
-COPY ["TruperBack/TruperBack.csproj", "TruperBack/"]
-RUN dotnet restore "TruperBack/TruperBack.csproj"
+# Copiar package.json y package-lock.json
+COPY package*.json ./
+
+# Instalar dependencias
+RUN npm install
+
+# Copiar el resto del código
 COPY . .
-WORKDIR "/src/TruperBack"
-RUN dotnet build "TruperBack.csproj" -c Release -o /app/build
 
-# Publish stage
-FROM build AS publish
-RUN dotnet publish "TruperBack.csproj" -c Release -o /app/publish /p:UseAppHost=false
+# Compilar la aplicación React
+RUN npm run build
 
-# Final stage
-FROM base AS final
-WORKDIR /app
-COPY --from=publish /app/publish .
+# Etapa final con Nginx
+FROM nginx:alpine AS final
+WORKDIR /usr/share/nginx/html
 
-# Create non-root user for security
-RUN adduser --disabled-password --gecos '' appuser && chown -R appuser /app
-USER appuser
+# Copiar los archivos compilados al contenedor
+COPY --from=build /app/build .
 
-# Set environment variables
-ENV ASPNETCORE_ENVIRONMENT=Production
-ENV ASPNETCORE_URLS=http://+:80
-
-ENTRYPOINT ["dotnet", "TruperBack.dll"]
-
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]

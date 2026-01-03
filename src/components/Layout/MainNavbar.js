@@ -30,9 +30,11 @@ const MainNavbar = ({
     if (isAdmin) {
       return NAV_LINKS;
     }
-    // Para todos los demás roles, solo mostrar Inicio y Captura Revisiones
+    // Para Coordinadores y Monitoristas, mostrar Inicio, Captura Revisiones y Entrega de Turno
     return NAV_LINKS.filter(link => 
-      link.key === 'dashboard' || link.key === 'captura-revisiones'
+      link.key === 'dashboard' || 
+      link.key === 'captura-revisiones' || 
+      link.key === 'entrega-turno'
     );
   };
 
