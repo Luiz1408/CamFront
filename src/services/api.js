@@ -3,10 +3,8 @@ import axios from 'axios';
 // ==========================
 // Configuración baseURL
 // ==========================
-// En desarrollo: localhost:5000
-// En producción Docker: contenedor backend
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://truper_backend:80', // nombre del servicio backend en docker-compose
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -50,7 +48,7 @@ api.interceptors.response.use(
 );
 
 // ==========================
-// Funciones de Usuarios
+// Funciones de la API (Usuarios, Folios, Revisiones, etc.)
 // ==========================
 export const getUsersByRole = async (role) => {
   const response = await api.get(`/User/role/${role}`);
@@ -63,17 +61,11 @@ export const getUsersByRole = async (role) => {
   }));
 };
 
-// ==========================
-// Funciones de Folios
-// ==========================
 export const getSiguienteFolio = async (tipo) => {
   const response = await api.get(`/Folios/siguiente-folio/${tipo}`);
   return response.data;
 };
 
-// ==========================
-// Funciones de Almacén-Ubicación-Folios
-// ==========================
 export const getAlmacenUbicacionFolios = async () => {
   const response = await api.get('/AlmacenUbicacionFolio');
   return response.data;
@@ -94,9 +86,6 @@ export const deleteAlmacenUbicacionFolio = async (id) => {
   return response.data;
 };
 
-// ==========================
-// Funciones Revisiones
-// ==========================
 export const getRevisiones = async () => {
   const response = await api.get('/CapturaRevisiones');
   return response.data;
