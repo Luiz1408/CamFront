@@ -1,11 +1,12 @@
 import axios from 'axios';
 
+// ==========================
+// Configuración baseURL
+// ==========================
+// En desarrollo: localhost:5000
+// En producción Docker: REACT_APP_API_URL
 const api = axios.create({
-  baseURL:
-    process.env.REACT_APP_API_URL ||
-    (process.env.NODE_ENV === 'production'
-      ? 'https://luiz1432-001-site1.site4future.com/api'
-      : 'http://localhost:5236'),
+  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
@@ -14,11 +15,16 @@ const api = axios.create({
 
 let logoutHandler = null;
 
+// ==========================
+// Permitir setear handler de logout
+// ==========================
 export const setLogoutHandler = (handler) => {
   logoutHandler = handler;
 };
 
-// Agrega token a cada request
+// ==========================
+// Interceptor request: agrega token
+// ==========================
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -30,7 +36,9 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Maneja 401
+// ==========================
+// Interceptor response: maneja 401
+// ==========================
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -41,7 +49,9 @@ api.interceptors.response.use(
   }
 );
 
-// Función para obtener usuarios por rol
+// ==========================
+// Funciones de Usuarios
+// ==========================
 export const getUsersByRole = async (role) => {
   try {
     const response = await api.get(`/User/role/${role}`);
@@ -58,7 +68,9 @@ export const getUsersByRole = async (role) => {
   }
 };
 
-// Función para obtener el siguiente folio
+// ==========================
+// Funciones de Folios
+// ==========================
 export const getSiguienteFolio = async (tipo) => {
   try {
     const response = await api.get(`/Folios/siguiente-folio/${tipo}`);
@@ -69,7 +81,9 @@ export const getSiguienteFolio = async (tipo) => {
   }
 };
 
-// Función para obtener catálogo de almacenes con folios y ubicaciones
+// ==========================
+// Funciones de Almacén-Ubicación-Folios
+// ==========================
 export const getAlmacenUbicacionFolios = async () => {
   try {
     const response = await api.get('/AlmacenUbicacionFolio');
@@ -80,13 +94,10 @@ export const getAlmacenUbicacionFolios = async () => {
   }
 };
 
-// Función para crear almacén-ubicación-folio
 export const createAlmacenUbicacionFolio = async (data) => {
   try {
     const response = await api.post('/AlmacenUbicacionFolio', data);
-    if (!response.data) {
-      throw new Error('No se recibieron datos en la respuesta');
-    }
+    if (!response.data) throw new Error('No se recibieron datos en la respuesta');
     return { success: true, data: response.data };
   } catch (error) {
     console.error('Error creando almacén-ubicación-folio:', error);
@@ -95,13 +106,10 @@ export const createAlmacenUbicacionFolio = async (data) => {
   }
 };
 
-// Función para actualizar almacén-ubicación-folio
 export const updateAlmacenUbicacionFolio = async (id, data) => {
   try {
     const response = await api.put(`/AlmacenUbicacionFolio/${id}`, data);
-    if (!response.data) {
-      throw new Error('No se recibieron datos en la respuesta');
-    }
+    if (!response.data) throw new Error('No se recibieron datos en la respuesta');
     return { success: true, data: response.data };
   } catch (error) {
     console.error('Error actualizando almacén-ubicación-folio:', error);
@@ -110,7 +118,6 @@ export const updateAlmacenUbicacionFolio = async (id, data) => {
   }
 };
 
-// Función para eliminar almacén-ubicación-folio
 export const deleteAlmacenUbicacionFolio = async (id) => {
   try {
     const response = await api.delete(`/AlmacenUbicacionFolio/${id}`);
@@ -121,7 +128,9 @@ export const deleteAlmacenUbicacionFolio = async (id) => {
   }
 };
 
-// Funciones para manejar Revisiones
+// ==========================
+// Funciones Revisiones
+// ==========================
 export const getRevisiones = async () => {
   try {
     const response = await api.get('/CapturaRevisiones');
@@ -162,4 +171,7 @@ export const deleteRevision = async (id) => {
   }
 };
 
+// ==========================
+// Export default
+// ==========================
 export default api;
