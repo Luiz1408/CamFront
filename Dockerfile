@@ -1,25 +1,34 @@
-# Etapa de build con Node
+# =========================
+# Etapa 1: Build React
+# =========================
 FROM node:18 AS build
 WORKDIR /app
 
-# Copiar package.json y package-lock.json
+# Copiar dependencias
 COPY package*.json ./
-
-# Instalar dependencias
 RUN npm install
 
-# Copiar el resto del código
+# Copiar código fuente
 COPY . .
 
-# Compilar la aplicación React
+# Compilar React
 RUN npm run build
 
-# Etapa final con Nginx
-FROM nginx:alpine AS final
+# =========================
+# Etapa 2: Nginx
+# =========================
+FROM nginx:alpine
 WORKDIR /usr/share/nginx/html
 
-# Copiar los archivos compilados al contenedor
+# Limpiar html por defecto
+RUN rm -rf ./*
+
+# Copiar build de React
 COPY --from=build /app/build .
 
+# Copiar configuración personalizada de Nginx
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
 EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+
+CMD ["ng]()
