@@ -1,15 +1,14 @@
 import axios from 'axios';
 
-// ==========================
-// Configuración baseURL
-// ==========================
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:5000',
+  baseURL: '/api',
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
 });
+
+export default api;
 
 let logoutHandler = null;
 
